@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fintech Final Ready</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{margin:0;font-family:Segoe UI,Arial;background:#0b0f1a;color:#fff}
+header{padding:14px;text-align:center;font-weight:700}
+.container{padding:10px}
+.card{background:#111827;border-radius:14px;padding:12px;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:8px;text-align:center} th{color:#9ca3af}
+tr{border-bottom:1px solid #1f2937}
+.income{color:#22c55e}.expense{color:#ef4444}
+.details{display:none}
+button,input{width:100%;padding:10px;margin:5px 0;border-radius:8px;border:none}
+.fab{position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;
+ background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:26px;border:none}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+ background:rgba(0,0,0,.85);justify-content:center;align-items:flex-end}
+.modal-box{width:100%;background:#111827;border-radius:20px 20px 0 0;padding:20px}
+.group{margin-bottom:12px}.label{font-size:12px;color:#9ca3af;margin-bottom:5px}
+input{background:#1f2937;color:#fff}
+.type-toggle{display:flex;gap:10px}
+.type-btn{flex:1;padding:12px;border-radius:10px;text-align:center;background:#1f2937}
+.active-income{background:#065f46}.active-expense{background:#7f1d1d}
+.save-btn{background:linear-gradient(135deg,#22c55e,#16a34a);padding:14px;border-radius:12px;text-align:center;font-weight:bold}
+</style>
+</head>
+<body>
+<header>💎 Fintech Final Ready</header>
+<div class="container">
+<input type="file" id="fileInput">
+<button onclick="exportCSV()">Export CSV</button>
+<div class="card"><canvas id="chart"></canvas></div>
+<div class="card"><table id="summary"></table></div>
+</div>
+<button class="fab" onclick="openModal()">+</button>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="group">
+      <div class="label">Type</div>
+      <div class="type-toggle">
+        <div id="incBtn" class="type-btn active-income" onclick="setType('income')">Income</div>
+        <div id="expBtn" class="type-btn" onclick="setType('expense')">Expense</div>
+      </div>
+    </div>
+    <div class="group"><div class="label">Amount</div><input type="number" id="amount"></div>
+    <div class="group"><div class="label">Date</div><input type="date" id="date"></div>
+    <div class="group"><div class="label">Note</div><input type="text" id="note"></div>
+    <div class="save-btn" onclick="save()">Save</div>
+  </div>
+</div>
+
+<script>
+let data=[], monthly={}, chartRef, type="income";
+function today(){return new Date().toISOString().split('T')[0];}
+function openModal(){ modal.style.display="flex"; date.value=today(); }
+function setType(t){ type=t; incBtn.classList.remove("active-income"); expBtn.classList.remove("active-expense");
+ if(t==="income") incBtn.classList.add("active-income"); else expBtn.classList.add("active-expense"); }
+function save(){
+  let d=date.value; let a=parseFloat(amount.value); let n=note.value||"";
+  if(!d||isNaN(a)) return alert("Enter valid data");
+  if(type==="expense") a=-Math.abs(a);
+  data.push({date:d,amt:a,note:n});
+  localStorage.setItem("fin",JSON.stringify(data));
+  modal.style.display="none"; rebuild();
+}
+fileInput.onchange = e=>{
+  const r=new FileReader();
+  r.onload=ev=>{
+    const rows=ev.target.result.trim().split("\n").slice(1);
+    data=[];
+    rows.forEach(x=>{
+      let c=x.split(",");
+      if(c[0] && c[1]) data.push({date:c[0],amt:parseFloat(c[1]),note:c[2]||""});
+    });
+    localStorage.setItem("fin",JSON.stringify(data)); rebuild();
+  };
+  r.readAsText(e.target.files[0]);
+};
+window.onload=()=>{ let s=localStorage.getItem("fin"); if(s){ data=JSON.parse(s); rebuild(); } };
+function rebuild(){
+  monthly={};
+  data.forEach(x=>{
+    let m=x.date.slice(0,7);
+    if(!monthly[m]) monthly[m]={i:0,e:0,tx:[]};
+    if(x.amt>0) monthly[m].i+=x.amt; else monthly[m].e+=Math.abs(x.amt);
+    monthly[m].tx.push(x);
+  });
+  renderChart(); renderTable();
+}
+function renderChart(){
+  if(chartRef) chartRef.destroy();
+  chartRef=new Chart(chart,{type:'bar',data:{
+    labels:Object.keys(monthly),
+    datasets:[
+      {label:'Income',data:Object.values(monthly).map(x=>x.i)},
+      {label:'Expense',data:Object.values(monthly).map(x=>x.e)}
+    ]}});
+}
+function renderTable(){
+  let html="<tr><th>Month</th><th>Income</th><th>Expense</th><th>Bal</th><th>Total</th></tr>";
+  let asc=Object.keys(monthly).sort(), map={}, carry=0;
+  asc.forEach(m=>{ let b=monthly[m].i-monthly[m].e; carry+=b; map[m]=carry; });
+  asc.reverse().forEach(m=>{
+    let d=monthly[m], b=d.i-d.e, t=map[m], id="d_"+m;
+    let inner="";
+    d.tx.forEach((x,i)=>{
+      inner+=`<tr onclick="edit('${m}',${i})"><td>${x.date}</td><td>${x.note}</td>
+      <td class="${x.amt>0?'income':'expense'}">${format(Math.abs(x.amt))}</td></tr>`;
+    });
+    html+=`<tr onclick="toggle('${id}')">
+      <td>${m}</td><td class="income">${format(d.i)}</td>
+      <td class="expense">${format(d.e)}</td>
+      <td>${format(b)}</td><td>${format(t)}</td></tr>
+      <tr id="${id}" class="details"><td colspan="5"><table>${inner}</table></td></tr>`;
+  });
+  summary.innerHTML=html;
+}
+function toggle(id){ let r=document.getElementById(id); r.style.display=r.style.display==="table-row"?"none":"table-row"; }
+function edit(m,i){
+  let x=monthly[m].tx[i];
+  date.value=x.date; amount.value=Math.abs(x.amt); note.value=x.note||"";
+  type = x.amt>0 ? "income" : "expense";
+  setType(type);
+  let idx=data.findIndex(d=>d.date===x.date && d.note===x.note && d.amt===x.amt);
+  if(idx>-1) data.splice(idx,1); // simple replace-on-save
+  openModal();
+}
+function format(n){return "₹"+Number(n).toLocaleString("en-IN");}
+function exportCSV(){
+  let csv="Date,Amount,Note\n";
+  data.forEach(d=>{ csv+=`${d.date},${d.amt},${d.note||""}\n`; });
+  let blob=new Blob([csv],{type:"text/csv"});
+  let a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="finance.csv"; a.click();
+}
+</script>
+</body>
+</html>
