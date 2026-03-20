@@ -1,29 +1,15 @@
-package com.example.fintech
 
-import android.annotation.SuppressLint
+package com.example.fintech
 import android.os.Bundle
-import android.webkit.WebChromeClient
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : AppCompatActivity() {
-
-    @SuppressLint("SetJavaScriptEnabled")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val webView = WebView(this)
-        setContentView(webView)
-
-        val settings = webView.settings
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        settings.allowFileAccess = true
-        settings.allowContentAccess = true
-
-        webView.webViewClient = WebViewClient()
-        webView.webChromeClient = WebChromeClient()
-
-        webView.loadUrl("file:///android_asset/index.html")
-    }
+class MainActivity: AppCompatActivity(){
+ override fun onCreate(savedInstanceState: Bundle?){
+  super.onCreate(savedInstanceState)
+  val w=WebView(this)
+  setContentView(w)
+  w.settings.javaScriptEnabled=true
+  w.loadUrl("file:///android_asset/index.html")
+ }
 }

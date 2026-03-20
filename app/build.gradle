@@ -1,20 +1,17 @@
-plugins {
-    id 'com.android.application'
-}
+
+plugins { id 'com.android.application' }
 
 android {
-    namespace "com.example.fintech"
-    compileSdk 33
-
-    defaultConfig {
-        applicationId "com.example.fintech"
-        minSdk 21
-        targetSdk 33
-        versionCode 1
-        versionName "1.0"
-    }
+ compileSdk 33
+ defaultConfig {
+  applicationId "com.example.fintech"
+  minSdk 21
+  targetSdk 33
+  versionCode 1
+  versionName "1.0"
+ }
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
+ implementation 'androidx.appcompat:appcompat:1.6.1'
 }
